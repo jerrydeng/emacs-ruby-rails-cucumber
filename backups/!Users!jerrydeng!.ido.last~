@@ -1,0 +1,187 @@
+
+;; ----- ido-last-directory-list -----
+(
+ ("/Users/jerrydeng/Projects/test/app/views/" . "layouts/")
+ ("/Users/jerrydeng/Projects/agencynowonline3/" . "app/")
+ ("/Users/jerrydeng/Projects/agencynowonline2/app/" . "models/")
+ ("/Users/jerrydeng/Projects/agencynowonline2/" . "app/")
+ ("/Users/" . "jerrydeng/")
+ ("/Applications/" . "Address Book.app/")
+ ("/" . "`/")
+ ("/Users/jerrydeng/Projects/birdeye-read-only/geovis/" . "asdocs/")
+ ("/Users/jerrydeng/Projects/birdeye-read-only/" . "geovis/")
+ ("/Users/jerrydeng/Projects/agencynowonline/app/views/" . "layouts/")
+ ("/Users/jerrydeng/Projects/agencynowonline/app/" . "controllers/")
+ ("/Users/jerrydeng/Projects/agencynowonline/" . "app/")
+ ("/Users/jerrydeng/Projects/neo4j_test/" . "app/")
+ ("/Users/jerrydeng/Projects/neo4j_test/app/" . "controllers/")
+ ("/Users/jerrydeng/" . "Projects/")
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/spec/" . "models/")
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/views/" . "layouts/")
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/" . "views/")
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/" . "spec/")
+ ("/Users/jerrydeng/Projects/test/" . "app/")
+ ("/Users/jerrydeng/Projects/test/app/" . "views/")
+ ("/Users/jerrydeng/Projects/" . "facebook_liarliar/")
+)
+
+;; ----- ido-work-directory-list -----
+(
+ "/Users/jerrydeng/Projects/facebook_liarliar/"
+ "/Users/jerrydeng/Projects/agencynowonline3/features/"
+ "/Users/jerrydeng/Projects/agencynowonline3/"
+ "/Users/jerrydeng/Projects/agencynowonline3/config/"
+ "/Users/jerrydeng/Projects/agencynowonline2/config/"
+ "/Users/jerrydeng/.emacs.d/"
+ "/Users/jerrydeng/"
+ "/Users/jerrydeng/Projects/agencynowonline/app/controllers/"
+ "/Users/jerrydeng/Projects/testrepo/"
+ "/Users/jerrydeng/Projects/birdeye-read-only/geovis/asdocs/"
+ "/Users/jerrydeng/Projects/agencynowonline/app/models/"
+ "/Users/jerrydeng/Projects/agencynowonline/app/helpers/"
+ "/Users/jerrydeng/Projects/agencynowonline/app/views/layouts/"
+ "/Users/jerrydeng/Projects/agencynowonline/app/views/contact/"
+ "/Users/jerrydeng/Projects/agencynowonline/"
+ "/Users/jerrydeng/Projects/facebook_breathalyzer/"
+ "/Users/jerrydeng/Projects/neo4j_test/app/controllers/"
+ "/Users/jerrydeng/Projects/neo4j_test/app/models/"
+ "/Users/jerrydeng/Projects/neo4j_test/config/"
+ "/Users/jerrydeng/Projects/neo4j_test/config/environments/"
+ "/Users/jerrydeng/Projects/neo4j_test/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/spec/models/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/config/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/models/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/spec/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/features/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/views/layouts/"
+ "/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/controllers/"
+ "/Users/jerrydeng/Projects/test/app/controllers/"
+ "/Users/jerrydeng/Projects/test/public/"
+)
+
+;; ----- ido-work-file-list -----
+(
+ "liarliar.rb"
+ "create_agency.feature"
+ "Gemfile"
+ "database.yml"
+ "init.el"
+ "#create_agency.feature#"
+ "README"
+ "Gemfile.lock"
+ ".emacs-places"
+ "application.rb"
+)
+
+;; ----- ido-dir-file-cache -----
+(
+ ("/Users/jerrydeng/Projects/facebook_liarliar/" (19595 50652) "liarliar.rb" "liarliar" "input_tie_truth.txt" "input_tie.txt" "input_single.txt" "input_original.txt" "input_one_mute.txt" "input_more.txt" "input_empty.txt" "input.txt" "1k_100.in" "1k.in" "10k_1k.in" ".git/" "../" "./")
+
+ ("/Users/jerrydeng/" (19595 50768) "user/" "springsource/" "Sites/" "Public/" "Projects/" "Pictures/" "Music/" "Movies/" "MOTODEV_Studio_for_Android_1.0.2/" "Library/" "emacsbackup/" "Downloads/" "Documents/" "dimchiff_emacs.d/" "Desktop/" ".Xcode/" ".Xauthority" ".viminfo" ".Trash/" ".subversion/" ".ssh/" ".sh_history" ".rvm/" ".ri/" ".recentf" ".rdebugrc" ".rdebug_hist" ".putty/" ".psi/" ".m2/" ".irb_history" ".ido.last" ".gitk" ".gem/" ".gdb_history" ".fontconfig/" ".filezilla/" ".emacs.d/" ".emacs-places" ".DS_Store" ".cups/" ".CFUserTextEncoding" ".bundle/" ".bash_profile" ".bash_history" ".android/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/app/views/layouts/" (19229 54408) "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/app/views/" (19229 54408) "layouts/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/app/models/" (19229 54408) "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline3/" (19595 11725) "vendor/" "tmp/" "test/" "spec/" "script/" "README" "Rakefile" "public/" "log/" "lib/" "Gemfile.lock" "Gemfile" "features/" "doc/" "db/" "config.ru" "config/" "autotest/" "app/" ".rspec" ".gitignore" ".git/" ".bundle/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline3/config/" (19595 9083) "routes.rb" "locales/" "initializers/" "environments/" "environment.rb" "database.yml" "cucumber.yml" "boot.rb" "application.rb" "../" "./")
+
+ ("/Users/jerrydeng/.emacs.d/" (19595 9011) "vendor/" "topfunky.el" "topfunky/" "starter-kit-ruby.el" "starter-kit-registers.el" "starter-kit-misc.el" "starter-kit-lisp.el" "starter-kit-js.el" "starter-kit-eshell.el" "starter-kit-elpa.el" "starter-kit-defuns.el" "starter-kit-bindings.el" "README.markdown" "places" "package.el" "octo.local.el" "loaddefs.el" "linum.el" "init.el~" "init.el" "elpa-to-submit/" "elpa/" "elisp/" "custom.el" "COPYING" "book.local.el" "backups/" "auto-save-list/" ".gitignore" ".git/" "#init.dl#" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline2/config/" (19506 26155) "routes.rb" "locales/" "initializers/" "environments/" "environment.rb" "database.yml" "boot.rb" "application.rb" "#database.yml#" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline3/features/" (19595 8067) "support/" "step_definitions/" "create_agency.feature" "##create_agency.feature##" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline3/app/" (19594 65209) "views/" "models/" "mailers/" "helpers/" "controllers/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/" (19594 65209) "workspace-sts/" "workspace-android/" "uniforceinsurance.com/" "testrepo/" "test2/" "test/" "store/" "sc_hello_wolrd/" "samples-todos/" "purposeforyou_org/" "pre-compiler-application/" "practice_game_of_life/" "neo4j_test/" "neo4j-examples-movie-night-2090246.zip" "mongodb_test/" "mail-test/" "kwongwa2010.com/" "kata_two_karate/" "kata_six_anagrams/" "kata_interview_questions/" "kata_four_data_munging/" "iphone_input_test/" "gitosis-admin/" "facebook_meep_meep/" "facebook_liarliar/" "facebook_hoppity_hop/" "facebook_breathalyzer/" "dcac-cantoneseminstry.org/" "CodeMash-2010-Precompiler-Application/" "closures/" "calculator/" "blog/" "birdeye-read-only/" "agencynowonline3/" "agencynowonline2/" "agencynowonline/" ".DS_Store" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/" (19504 6231) "vendor/" "tmp/" "test/" "script/" "robots.txt" "README_LOGIN" "README" "Rakefile" "public/" "log/" "lib/" "foreign/" "favicon.ico" "favicon.gif" "doc/" "db/" "config/" "app/" ".project" ".gitignore" ".git/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/models/" (19503 49913) "vendor.rb" "vehicle.rb" "user_mailer.rb" "user.rb" "referral.rb" "receipt.rb" "property.rb" "producer.rb" "processor.rb" "policy.rb" "journal.rb" "finance.rb" "facsimile.rb" "entry.rb" "email.rb" "driver.rb" "contact.rb" "commission.rb" "check.rb" "category.rb" "carrier.rb" "campaign.rb" "business.rb" "broker.rb" "attachment.rb" "agency.rb" "activity.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/birdeye-read-only/geovis/asdocs/" (19503 53847) "title-bar.html" "style.css" "print.css" "package-summary.html" "package-list.html" "package-frame.html" "org/" "mxml-tags.html" "index.html" "index-list.html" "images/" "cookies.js" "class-summary.html" "asdoc.js" "appendixes.html" "all-index-Z.html" "all-index-Y.html" "all-index-X.html" "all-index-W.html" "all-index-V.html" "all-index-U.html" "all-index-T.html" "all-index-S.html" "all-index-R.html" "all-index-Q.html" "all-index-P.html" "all-index-O.html" "all-index-N.html" "all-index-M.html" "all-index-L.html" "all-index-K.html" "all-index-J.html" "all-index-I.html" "all-index-H.html" "all-index-G.html" "all-index-F.html" "all-index-E.html" "all-index-D.html" "all-index-C.html" "all-index-B.html" "all-index-A.html" "all-classes.html" "../" "./")
+
+ ("/Users/jerrydeng/Projects/testrepo/" (19503 54115) "test.txt" ".git/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/controllers/" (19503 55238) "vendor_controller.rb" "vehicle_controller.rb" "umail_controller.rb" "report_controller.rb" "renew_controller.rb" "referral_controller.rb" "receipt_controller.rb" "property_controller.rb" "producer_controller.rb" "processor_controller.rb" "policy_controller.rb" "journal_controller.rb" "import_controller.rb" "gen_xml_controller.rb" "finance_controller.rb" "facsimile_controller.rb" "entry_controller.rb" "email_controller.rb" "driver_controller.rb" "contact_controller.rb" "commission_controller.rb" "check_controller.rb" "category_controller.rb" "carrier_controller.rb" "campaign_controller.rb" "business_controller.rb" "broker_controller.rb" "attachment_controller.rb" "application.rhtml" "application.rb" "agency_controller.rb" "activity_controller.rb" "account_controller.rb" ".tmp_application.rhtml.15390~" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline2/app/models/" (19506 25261) "contact.rb" "client.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline2/app/" (19506 24671) "views/" "models/" "helpers/" "controllers/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline2/" (19506 26309) "vendor/" "tmp/" "test/" "script/" "README" "Rakefile" "public/" "log/" "lib/" "Gemfile" "doc/" "db/" "config.ru" "config/" "app/" ".gitignore" ".git/" ".bundle/" "../" "./")
+
+ ("/Applications/Address Book.app/" (19486 8316) "Contents/" "../" "./")
+
+ ("/Applications/" (19499 61431) "VLC.app/" "Utilities/" "TweetDeck.app/" "Transmission.app/" "Time Machine.app/" "TextMate.app/" "TextEdit.app/" "System Preferences.app/" "Stickies.app/" "SpringSource ROO" "Skype.app/" "Sequel Pro.app/" "Seashore.app/" "Safari.app/" "Remote Desktop Connection.app/" "QuickTime Player.app/" "Preview.app/" "Pixelmator.app/" "Photo Booth.app/" "Opera.app/" "OpenOffice.org.app/" "MotoDev Studio for Android" "Microsoft Silverlight/" "Mail.app/" "iWeb.app/" "iTunes.app/" "iSync.app/" "iStat Menus.app/" "iPhoto.app/" "iMovie.app/" "Image Capture.app/" "iDVD.app/" "iChat.app/" "iCal.app/" "HandBrake.app/" "Google Chrome.app/" "Gimp.app/" "GarageBand.app/" "Front Row.app/" "Font Book.app/" "Flip4Mac/" "Firefox.app/" "FileZilla.app/" "Fairmount (for VLC 32 bits).app/" "eMedia Piano Method 1.app/" "Emacs.app/" "DVDRemaster.app/" "DVD Player.app/" "Dictionary.app/" "Dashboard.app/" "Colloquy.app/" "Chess.app/" "Calculator.app/" "Automator.app/" "Adobe Media Player.app/" "Adobe/" "Adium.app/" "Address Book.app/" ".localized" ".DS_Store" "../" "./")
+
+ ("/Users/jerrydeng/Projects/birdeye-read-only/geovis/" (19319 40012) "src/" "examples/" "demo/" "asdocs/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/birdeye-read-only/" (19319 40013) "tavis/" "ravis/" "qavis/" "images/" "guvis/" "geovis/" ".git/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/helpers/" (19502 62826) "vendor_helper.rb" "vehicle_helper.rb" "umail_helper.rb" "report_helper.rb" "renew_helper.rb" "referral_helper.rb" "receipt_helper.rb" "property_helper.rb" "producer_helper.rb" "processor_helper.rb" "policy_helper.rb" "journal_helper.rb" "import_helper.rb" "gen_xml_helper.rb" "finance_helper.rb" "facsimile_helper.rb" "entry_helper.rb" "email_helper.rb" "driver_helper.rb" "contact_helper.rb" "commission_helper.rb" "check_helper.rb" "category_helper.rb" "carrier_helper.rb" "campaign_helper.rb" "business_helper.rb" "broker_helper.rb" "attachment_helper.rb" "application_helper.rb" "agency_helper.rb" "activity_helper.rb" "account_helper.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/views/layouts/" (19502 62826) "scaffold.rhtml" "property.rhtml" "application.rhtml" ".tmp_vendor.rhtml.94230~" ".tmp_vehicle.rhtml.75556~" ".tmp_scaffold.rhtml.5209~" ".tmp_referral.rhtml.70467~" ".tmp_property.rhtml.9461~" ".tmp_property.rhtml.25696~" ".tmp_producer.rhtml.67202~" ".tmp_processor.rhtml.83018~" ".tmp_policy.rhtml.31326~" ".tmp_journal.rhtml.12767~" ".tmp_finance.rhtml.96285~" ".tmp_facsimile.rhtml.44706~" ".tmp_email.rhtml.89825~" ".tmp_driver.rhtml.69698~" ".tmp_contact.rhtml.61160~" ".tmp_contact.rhtml.32384~" ".tmp_contact.rhtml.21835~" ".tmp_commission.rhtml.74845~" ".tmp_check.rhtml.116~" ".tmp_category.rhtml.3752~" ".tmp_carrier.rhtml.70969~" ".tmp_campaign.rhtml.95908~" ".tmp_business.rhtml.2807~" ".tmp_broker.rhtml.532~" ".tmp_attachment.rhtml.61016~" ".tmp_application.rhtml.97211~" ".tmp_agency.rhtml.1894~" ".tmp_activity.rhtml.68664~" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/views/contact/" (19502 62826) "_javascript.rhtml" ".tmp__javascript.rhtml.93437~" ".tmp__javascript.rhtml.77369~" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/views/" (19502 62826) "user_mailer/" "umail/" "report/" "renew/" "receipt/" "property/" "layouts/" "import/" "contact/" "commission/" "account/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/agencynowonline/app/" (19502 62826) "views/" "models/" "helpers/" "controllers/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/" (19278 16876) "vendor/" "spec/" "script/" "README" "Rakefile" "public/" "log/" "lib/" "generate" "Gemfile" "features/" "db/" "config/" "app/" ".gitignore" ".git/" ".gems" "../" "./")
+
+ ("/Users/jerrydeng/Projects/neo4j_test/config/" (19488 17892) "routes.rb" "locales/" "initializers/" "environments/" "environment.rb" "database.yml" "boot.rb" "application.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/neo4j_test/app/controllers/" (19488 20397) "movies_controller.rb" "application_controller.rb" "#movies_controller.rb#" "../" "./")
+
+ ("/Users/jerrydeng/Projects/neo4j_test/" (19488 17311) "vendor/" "tmp/" "test/" "script/" "README" "Rakefile" "public/" "lucene/" "log/" "lib/" "Gemfile" "doc/" "db/" "config.ru" "config/" "app/" ".gitignore" ".bundle/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/neo4j_test/app/models/" (19488 17133) "movie.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/neo4j_test/config/environments/" (19482 48191) "test.rb" "production.rb" "development.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/facebook_breathalyzer/" (19481 40802) "twl06.txt" "string_mod.rb" "scalable_spec.rb" "index.rb" "comparison_spec.rb" "breathalyzer_spec.rb" "breathalyzer_flymake.rb" "breathalyzer.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/neo4j_test/app/" (19481 42812) "views/" "models/" "helpers/" "controllers/" "../" "./")
+
+ ("/Users/" (19229 41329) "Shared/" "jerrydeng/" ".localized" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/controllers/" (19278 16680) "users_controller.rb" "user_sessions_controller.rb" "ratings_controller.rb" "presenters_controller.rb" "presentations_controller.rb" "conferences_controller.rb" "comments_controller.rb" "application_controller.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/views/layouts/" (19278 16680) "conferences.html.erb" "application.html.erb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/features/" (19278 16680) "support/" "step_definitions/" "speaker.feature" "select_session.feature" "presentation.feature" "authentication.feature" "admin.feature" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/spec/" (19278 16680) "spec_helper.rb" "spec.opts" "rcov.opts" "models/" "fixtures/" "factories.rb" "controllers/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/models/" (19278 16680) "user_session.rb" "user.rb" "rating.rb" "presenter.rb" "presentation.rb" "conference.rb" "comment.rb" "category.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/config/" (19278 16680) "routes.rb" "locales/" "initializers/" "environments/" "environment.rb" "database.yml" "database.example.yml" "boot.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/spec/models/" (19278 16680) "user_spec.rb" "rating_spec.rb" "presenter_spec.rb" "presentation_spec.rb" "comment_spec.rb" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/" (19277 61898) "views/" "models/" "helpers/" "controllers/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/test/" (19277 61898) "unit/" "functional/" "../" "./")
+
+ ("/User Guides And Information/" (19229 41331) "Welcome to Snow Leopard.app/" "MacBook Pro 13-inch Users Guide.pdf" "ENERGY STAR.pdf" "Apple Hardware Test Read Me.app/" "AirPort Extreme and Bluetooth Regulatory Certification.pdf" ".localized/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/app/controllers/" (19276 6859) "application_controller.rb" "#application_controller.rb#" "../" "./")
+
+ ("/Users/jerrydeng/Projects/CodeMash-2010-Precompiler-Application/app/views/" (19277 53812) "users/" "user_sessions/" "shared/" "layouts/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/public/" (19276 6115) "stylesheets/" "robots.txt" "javascripts/" "index.html" "images/" "favicon.ico" "500.html" "422.html" "404.html" "#index.html#" "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/app/" (19229 54408) "views/" "models/" "helpers/" "controllers/" "../" "./")
+
+ ("/Users/jerrydeng/Projects/test/" (19229 54408) "vendor/" "tmp/" "test/" "script/" "README" "Rakefile" "public/" "log/" "lib/" "doc/" "db/" "config/" "app/" "../" "./")
+)
+
+;; ----- ido-unc-hosts-cache -----
+t
+

@@ -1,0 +1,4 @@
+class Movie < Neo4j::Model
+  property :title
+  validates_presence_of :title
+end
