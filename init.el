@@ -78,6 +78,16 @@
 (add-to-list 'load-path (expand-file-name "~/.emacs.d/rails-minor-mode"))
 ;; (require 'rails)
 
+;; Set and load php mode
+(add-to-list 'load-path "~/.emacs.d/elisp")
+(load "php-mode")
+(add-to-list 'auto-mode-alist '("\\.php[34]?\\'\\|\\.phtml\\'" . php-mode))
+
+;; Load yaml mode
+(require 'yaml-mode)
+(add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
+
+
 ;; Benchmarking
 (message "My .emacs loaded in %ds"
          (destructuring-bind (hi lo ms) (current-time)
