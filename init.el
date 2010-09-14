@@ -47,7 +47,7 @@
 (require 'starter-kit-eshell)
 (require 'starter-kit-lisp)
 (require 'starter-kit-ruby)
-;; (require 'starter-kit-js)
+(require 'starter-kit-js)
 
 (regen-autoloads)
 (load custom-file 'noerror)
@@ -87,6 +87,11 @@
 (add-to-list 'load-path "~/.emacs.d/elisp")
 (load "php-mode")
 (add-to-list 'auto-mode-alist '("\\.php[34]?\\'\\|\\.phtml\\'" . php-mode))
+
+;; Set and load ruby-mode
+(load "ruby-mode")
+(load "inf-ruby")
+(load "ruby-electric")
 
 ;; Load yaml mode
 (require 'yaml-mode)
