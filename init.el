@@ -97,6 +97,17 @@
 (require 'yaml-mode)
 (add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
 
+;; set emacs nav
+(add-to-list 'load-path "~/.emacs.d/elisp/emacs-nav")
+(require 'nav)
+(nav)
+
+;; set color theme
+;; (add-to-list 'load-path "~/.emacs.d/elisp/color-theme")
+;;(require 'color-theme)
+;;(color-theme-initialize)
+;;(load-file "~/.emacs.d/themes/color-theme-blackboard.el")
+;;(color-theme-blackboard)
 
 ;; Benchmarking
 (message "My .emacs loaded in %ds"
