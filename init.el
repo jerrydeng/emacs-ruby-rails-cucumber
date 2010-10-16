@@ -115,6 +115,11 @@
            (- (+ hi lo) (+ (first *emacs-load-start*) (second
                                                        *emacs-load-start*)))))
 
+;; load scala-mode
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/scala-mode"))
+(require 'scala-mode)
+(add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
+;;(add-hook 'scala-mode-hook '(lambda () (yas/minor-mode-on)))
 
 (provide 'init)
 ;;; init.el ends here
