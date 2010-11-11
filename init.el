@@ -75,13 +75,12 @@
 (add-to-list 'auto-mode-alist '("\.feature$" . feature-mode))
 
 ;; Set and load rspec not working below
-(add-to-list 'load-path "~/.emacs.d/vendor/rspec-mode")
+(add-to-list 'load-path "~/.emacs.d/elisp")
 (require 'rspec-mode)
-(add-to-list 'auto-mode-alist '("\_spec.rb" . rspec-mode))
 
 ;; Set rails minor-mode
 (add-to-list 'load-path (expand-file-name "~/.emacs.d/rails-minor-mode"))
-;; (require 'rails)
+;;(require 'rails)
 
 ;; Set and load php mode
 (add-to-list 'load-path "~/.emacs.d/elisp")
