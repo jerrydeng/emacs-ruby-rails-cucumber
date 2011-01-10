@@ -120,5 +120,11 @@
 (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
 ;;(add-hook 'scala-mode-hook '(lambda () (yas/minor-mode-on)))
 
+;; check and use local copy for ftp edit
+(setq recentf-keep '(file-remote-p file-readable-p))
+
+; try to improve slow performance on windows.
+(setq w32-get-true-file-attributes nil)
+
 (provide 'init)
 ;;; init.el ends here
