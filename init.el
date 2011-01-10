@@ -102,11 +102,11 @@
 (nav)
 
 ;; set color theme
-;; (add-to-list 'load-path "~/.emacs.d/elisp/color-theme")
-;;(require 'color-theme)
-;;(color-theme-initialize)
-;;(load-file "~/.emacs.d/themes/color-theme-blackboard.el")
-;;(color-theme-blackboard)
+(add-to-list 'load-path "~/.emacs.d/elisp/color-theme")
+(require 'color-theme)
+(color-theme-initialize)
+(load-file "~/.emacs.d/themes/color-theme-blackboard.el")
+(color-theme-blackboard)
 
 ;; Benchmarking
 (message "My .emacs loaded in %ds"

@@ -1,2 +1,4 @@
 backups
 places
+auto-save-list/*
+session.*
