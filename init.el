@@ -184,6 +184,7 @@
 (load "ruby-mode")
 (load "inf-ruby")
 (load "ruby-electric")
+(add-to-list 'auto-mode-alist '("\\.erb$" . ruby-mode))
 
 ;; Load yaml mode
 (require 'yaml-mode)
