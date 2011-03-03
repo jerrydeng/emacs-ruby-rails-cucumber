@@ -184,7 +184,11 @@
 (load "ruby-mode")
 (load "inf-ruby")
 (load "ruby-electric")
-(add-to-list 'auto-mode-alist '("\\.erb$" . ruby-mode))
+
+;; Set and load rhtml mode
+(add-to-list 'load-path "~/.emacs.d/rhtml")
+(require 'rhtml-mode)
+(add-to-list 'auto-mode-alist '("\\.erb$" . rhtml-mode))
 
 ;; Load yaml mode
 (require 'yaml-mode)
