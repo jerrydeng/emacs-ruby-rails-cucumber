@@ -238,5 +238,10 @@
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
 (autoload 'javascript-mode "javascript" nil t)
 
+;; zencoding mode
+(add-to-list 'load-path "~/.emacs.d/zencoding")
+(require 'zencoding-mode)
+(add-hook 'sgml-mode-hook 'zencoding-mode) ;; Auto-start on any markup modes
+
 (provide 'init)
 ;;; init.el ends here
