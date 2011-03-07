@@ -1,661 +1,1059 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-        <title>404 - GitHub</title>
-    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub" />
-    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub" />
+;;; zencoding-mode.el --- Unfold CSS-selector-like expressions to markup
+;;
+;; Copyright (C) 2009, Chris Done
+;;
+;; Author: Chris Done <chrisdone@gmail.com>
+(defconst zencoding-mode:version "0.5")
+;; Last-Updated: 2009-11-20 Fri
+;; Keywords: convenience
+;;
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+;;
+;; This file is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;; Commentary:
+;;
+;; Unfold CSS-selector-like expressions to markup. Intended to be used
+;; with sgml-like languages; xml, html, xhtml, xsl, etc.
+;;
+;; See `zencoding-mode' for more information.
+;;
+;; Copy zencoding-mode.el to your load-path and add to your .emacs:
+;;
+;;    (require 'zencoding-mode)
+;;
+;; Example setup:
+;;
+;;    (add-to-list 'load-path "~/Emacs/zencoding/")
+;;    (require 'zencoding-mode)
+;;    (add-hook 'sgml-mode-hook 'zencoding-mode) ;; Auto-start on any markup modes
+;;
+;; Enable the minor mode with M-x zencoding-mode.
+;;
+;; See ``Test cases'' section for a complete set of expression types.
+;;
+;; If you are hacking on this project, eval (zencoding-test-cases) to
+;; ensure that your changes have not broken anything. Feel free to add
+;; new test cases if you add new features.
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;; History:
+;;
+;; Modified by Lennart Borgman.
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;; Code:
 
-    <link href="https://assets2.github.com/stylesheets/bundle_common.css?42a88d59f4e6454178639ad0cc38846a091c9551" media="screen" rel="stylesheet" type="text/css" />
-<link href="https://assets1.github.com/stylesheets/bundle_github.css?42a88d59f4e6454178639ad0cc38846a091c9551" media="screen" rel="stylesheet" type="text/css" />
+;; Include the trie data structure for caching
+;(require 'zencoding-trie)
 
-    <script type="text/javascript">
-      if (typeof console == "undefined" || typeof console.log == "undefined")
-        console = { log: function() {} }
-    </script>
-    <script type="text/javascript" charset="utf-8">
-      var GitHub = {}
-      var github_user = null
-      
-    </script>
-    <script src="https://assets0.github.com/javascripts/jquery/jquery-1.4.2.min.js?42a88d59f4e6454178639ad0cc38846a091c9551" type="text/javascript"></script>
-    <script src="https://assets0.github.com/javascripts/bundle_common.js?42a88d59f4e6454178639ad0cc38846a091c9551" type="text/javascript"></script>
-<script src="https://assets1.github.com/javascripts/bundle_github.js?42a88d59f4e6454178639ad0cc38846a091c9551" type="text/javascript"></script>
+(require 'cl)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generic parsing macros and utilities
+
+(defmacro zencoding-aif (test-form then-form &rest else-forms)
+  "Anaphoric if. Temporary variable `it' is the result of test-form."
+  `(let ((it ,test-form))
+     (if it ,then-form ,@(or else-forms '(it)))))
+
+(defmacro zencoding-pif (test-form then-form &rest else-forms)
+  "Parser anaphoric if. Temporary variable `it' is the result of test-form."
+  `(let ((it ,test-form))
+     (if (not (eq 'error (car it))) ,then-form ,@(or else-forms '(it)))))
+
+(defmacro zencoding-parse (regex nums label &rest body)
+  "Parse according to a regex and update the `input' variable."
+  `(zencoding-aif (zencoding-regex ,regex input ',(number-sequence 0 nums))
+                  (let ((input (elt it ,nums)))
+                    ,@body)
+                  `,`(error ,(concat "expected " ,label))))
+
+(defmacro zencoding-run (parser then-form &rest else-forms)
+  "Run a parser and update the input properly, extract the parsed
+   expression."
+  `(zencoding-pif (,parser input)
+                  (let ((input (cdr it))
+                        (expr (car it)))
+                    ,then-form)
+                  ,@(or else-forms '(it))))
+
+(defmacro zencoding-por (parser1 parser2 then-form &rest else-forms)
+  "OR two parsers. Try one parser, if it fails try the next."
+  `(zencoding-pif (,parser1 input)
+                  (let ((input (cdr it))
+                        (expr (car it)))
+                    ,then-form)
+                  (zencoding-pif (,parser2 input)
+                                 (let ((input (cdr it))
+                                       (expr (car it)))
+                                   ,then-form)
+                                 ,@else-forms)))
+
+(defun zencoding-regex (regexp string refs)
+  "Return a list of (`ref') matches for a `regex' on a `string' or nil."
+  (if (string-match (concat "^" regexp "\\([^\n]*\\)$") string)
+      (mapcar (lambda (ref) (match-string ref string))
+              (if (sequencep refs) refs (list refs)))
+    nil))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Zen coding parsers
+
+(defun zencoding-expr (input)
+  "Parse a zen coding expression with optional filters."
+  (zencoding-pif (zencoding-parse "\\(.*?\\)|" 2 "expr|filter" it)
+                 (let ((input (elt it 1))
+                       (filters (elt it 2)))
+                   (zencoding-pif (zencoding-extract-filters filters)
+                                  (zencoding-filter input it)
+                                  it))
+                 (zencoding-filter input (zencoding-default-filter))))
+
+(defun zencoding-subexpr (input)
+  "Parse a zen coding expression with no filter. This pretty much defines precedence."
+  (zencoding-run zencoding-siblings
+                 it
+                 (zencoding-run zencoding-parent-child
+                                it
+                                (zencoding-run zencoding-multiplier
+                                               it
+                                               (zencoding-run zencoding-pexpr
+                                                              it
+                                                              (zencoding-run zencoding-tag
+                                                                             it
+                                                                             '(error "no match, expecting ( or a-zA-Z0-9")))))))
+
+(defun zencoding-extract-filters (input)
+  "Extract filters from expression."
+  (zencoding-pif (zencoding-parse "\\([^\\|]+?\\)|" 2 "" it)
+                 (let ((filter-name (elt it 1))
+                       (more-filters (elt it 2)))
+                   (zencoding-pif (zencoding-extract-filters more-filters)
+                                  (cons filter-name it)
+                                  it))
+                 (zencoding-parse "\\([^\\|]+\\)" 1 "filter name" `(,(elt it 1)))))
+
+(defun zencoding-filter (input filters)
+  "Construct AST with specified filters."
+  (zencoding-pif (zencoding-subexpr input)
+                 (let ((result (car it))
+                       (rest (cdr it)))
+                   `((filter ,filters ,result) . ,rest))
+                 it))
+
+(defun zencoding-default-filter ()
+  "Default filter(s) to be used if none is specified."
+  (let* ((file-ext (car (zencoding-regex ".*\\(\\..*\\)"(buffer-file-name) 1)))
+         (defaults '(".html" ("html")
+                     ".htm"  ("html")
+                     ".haml" ("haml")
+                     ".clj"  ("hic")))
+         (default-else      '("html"))
+         (selected-default (member file-ext defaults)))
+    (if selected-default
+        (cadr selected-default)
+      default-else)))
+
+(defun zencoding-multiplier (input)
+  (zencoding-por zencoding-pexpr zencoding-tag
+                 (let ((multiplier expr))
+                   (zencoding-parse "\\*\\([0-9]+\\)" 2 "*n where n is a number"
+                                    (let ((multiplicand (read (elt it 1))))
+                                      `((list ,(make-list multiplicand multiplier)) . ,input))))
+                 '(error "expected *n multiplier")))
+
+(defun zencoding-tag (input)
+  "Parse a tag."
+  (zencoding-run zencoding-tagname
+                 (let ((tagname (cadr expr))
+                       (has-body? (cddr expr)))
+                   (zencoding-pif (zencoding-run zencoding-identifier
+                                                 (zencoding-tag-classes
+                                                  `(tag (,tagname ,has-body? ,(cddr expr))) input)
+                                                 (zencoding-tag-classes
+                                                  `(tag (,tagname ,has-body? nil)) input))
+                                  (let ((expr (car it))
+                                        (input (cdr it)))
+                                    (zencoding-tag-props expr input))))
+                 (zencoding-default-tag input)))
+
+(defun zencoding-default-tag (input)
+  "Parse a #id or .class"
+  (zencoding-parse "\\([#|\\.]\\)" 1 "tagname"
+                   (zencoding-tag (concat "div" (elt it 0)))))
+
+(defun zencoding-tag-props (tag input)
+  (let ((tag-data (cadr tag)))
+    (zencoding-run zencoding-props
+                   (let ((props (cdr expr)))
+                     `((tag ,(append tag-data (list props))) . ,input))
+                   `((tag ,(append tag-data '(nil))) . ,input))))
+
+(defun zencoding-props (input)
+  "Parse many props."
+    (zencoding-run zencoding-prop
+                   (zencoding-pif (zencoding-props input)
+                                  `((props . ,(cons expr (cdar it))) . ,(cdr it))
+                                  `((props . ,(list expr)) . ,input))))
+
+(defun zencoding-prop (input)
+  (zencoding-parse
+   " " 1 "space"
+   (zencoding-run
+    zencoding-name
+    (let ((name (cdr expr)))
+      (zencoding-pif (zencoding-prop-value name input)
+                     it
+                     `((,(read name) "") . ,input))))))
+
+(defun zencoding-prop-value (name input)
+  (zencoding-pif (zencoding-parse "=\"\\(.*?\\)\"" 2
+                                  "=\"property value\""
+                                  (let ((value (elt it 1))
+                                        (input (elt it 2)))
+                                    `((,(read name) ,value) . ,input)))
+                 it
+                 (zencoding-parse "=\\([^\\,\\+\\>\\ )]*\\)" 2
+                                  "=property value"
+                                  (let ((value (elt it 1))
+                                        (input (elt it 2)))
+                                    `((,(read name) ,value) . ,input)))))
+
+(defun zencoding-tag-classes (tag input)
+  (let ((tag-data (cadr tag)))
+    (zencoding-run zencoding-classes
+                   (let ((classes (mapcar (lambda (cls) (cdadr cls))
+                                          (cdr expr))))
+                     `((tag ,(append tag-data (list classes))) . ,input))
+                   `((tag ,(append tag-data '(nil))) . ,input))))
+
+(defun zencoding-tagname (input)
+  "Parse a tagname a-zA-Z0-9 tagname (e.g. html/head/xsl:if/br)."
+  (zencoding-parse "\\([a-zA-Z][a-zA-Z0-9:-]*\/?\\)" 2 "tagname, a-zA-Z0-9"
+                   (let* ((tag-spec (elt it 1))
+                          (empty-tag (zencoding-regex "\\([^\/]*\\)\/" tag-spec 1))
+                          (tag (if empty-tag
+                                   (car empty-tag)
+                                 tag-spec)))
+                     `((tagname . (,tag . ,(not empty-tag))) . ,input))))
+
+(defun zencoding-pexpr (input)
+  "A zen coding expression with parentheses around it."
+  (zencoding-parse "(" 1 "("
+                   (zencoding-run zencoding-subexpr
+                                  (zencoding-aif (zencoding-regex ")" input '(0 1))
+                                                 `(,expr . ,(elt it 1))
+                                                 '(error "expecting `)'")))))
+
+(defun zencoding-parent-child (input)
+  "Parse an tag>e expression, where `n' is an tag and `e' is any
+   expression."
+  (zencoding-run zencoding-multiplier
+                 (let* ((items (cadr expr))
+                        (rest (zencoding-child-sans expr input)))
+                   (if (not (eq (car rest) 'error))
+                       (let ((child (car rest))
+                             (input (cdr rest)))
+                         (cons (cons 'list
+                                     (cons (mapcar (lambda (parent)
+                                                     `(parent-child ,parent ,child))
+                                                   items)
+                                           nil))
+                               input))
+                     '(error "expected child")))
+                 (zencoding-run zencoding-tag
+                                (zencoding-child expr input)
+                                '(error "expected parent"))))
+
+(defun zencoding-child-sans (parent input)
+  (zencoding-parse ">" 1 ">"
+                   (zencoding-run zencoding-subexpr
+                                  it
+                                  '(error "expected child"))))
+
+(defun zencoding-child (parent input)
+  (zencoding-parse ">" 1 ">"
+                   (zencoding-run zencoding-subexpr
+                                  (let ((child expr))
+                                    `((parent-child ,parent ,child) . ,input))
+                                  '(error "expected child"))))
+
+(defun zencoding-sibling (input)
+  (zencoding-por zencoding-pexpr zencoding-multiplier
+                 it
+                 (zencoding-run zencoding-tag
+                                it
+                                '(error "expected sibling"))))
+
+(defun zencoding-siblings (input)
+  "Parse an e+e expression, where e is an tag or a pexpr."
+  (zencoding-run zencoding-sibling
+                 (let ((parent expr))
+                   (zencoding-parse "\\+" 1 "+"
+                                    (zencoding-run zencoding-subexpr
+                                                   (let ((child expr))
+                                                     `((sibling ,parent ,child) . ,input))
+                                                   (zencoding-expand parent input))))
+                 '(error "expected first sibling")))
+
+(defvar zencoding-expandable-tags
+  '("dl"    ">(dt+dd)"
+    "ol"    ">li"
+    "ul"    ">li"
+    "table" ">tr>td"))
+
+(defun zencoding-expand (parent input)
+  "Parse an e+ expression, where e is an expandable tag"
+  (let* ((parent-tag (car (elt parent 1)))
+         (expandable (member parent-tag zencoding-expandable-tags)))
+    (if expandable
+        (let ((expansion (zencoding-child parent (concat (cadr expandable)))))
+          (zencoding-pif (zencoding-parse "+\\(.*\\)" 1 "+expr"
+                                          (zencoding-subexpr (elt it 1)))
+                         `((sibling ,(car expansion) ,(car it)))
+                         expansion))
+      '(error "expected second sibling"))))
+
+(defun zencoding-name (input)
+  "Parse a class or identifier name, e.g. news, footer, mainimage"
+  (zencoding-parse "\\([a-zA-Z][a-zA-Z0-9-_:]*\\)" 2 "class or identifer name"
+                   `((name . ,(elt it 1)) . ,input)))
+
+(defun zencoding-class (input)
+  "Parse a classname expression, e.g. .foo"
+  (zencoding-parse "\\." 1 "."
+                   (zencoding-run zencoding-name
+                                  `((class ,expr) . ,input)
+                                  '(error "expected class name"))))
+(defun zencoding-identifier (input)
+  "Parse an identifier expression, e.g. #foo"
+  (zencoding-parse "#" 1 "#"
+                   (zencoding-run zencoding-name
+                                  `((identifier . ,expr) . ,input))))
+
+(defun zencoding-classes (input)
+  "Parse many classes."
+  (zencoding-run zencoding-class
+                 (zencoding-pif (zencoding-classes input)
+                                `((classes . ,(cons expr (cdar it))) . ,(cdr it))
+                                `((classes . ,(list expr)) . ,input))
+                 '(error "expected class")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Zen coding transformer from AST to string
+
+(defvar zencoding-inline-tags
+  '("a"
+    "abbr"
+    "acronym"
+    "cite"
+    "code"
+    "dd"
+    "dfn"
+    "dt"
+    "em"
+    "h1" "h2" "h3" "h4" "h5" "h6"
+    "kbd"
+    "li"
+    "q"
+    "span"
+    "strong"
+    "var"))
+
+(defvar zencoding-block-tags
+  '("p"))
+
+(defvar zencoding-self-closing-tags
+  '("br"
+    "img"
+    "input"))
+
+(defvar zencoding-leaf-function nil
+  "Function to execute when expanding a leaf node in the
+  Zencoding AST.")
+
+(defvar zencoding-filters
+  '("html" (zencoding-primary-filter zencoding-make-html-tag)
+    "c"    (zencoding-primary-filter zencoding-make-commented-html-tag)
+    "haml" (zencoding-primary-filter zencoding-make-haml-tag)
+    "hic"  (zencoding-primary-filter zencoding-make-hiccup-tag)
+    "e"    (zencoding-escape-xml)))
+
+(defun zencoding-primary-filter (input proc)
+  "Process filter that needs to be executed first, ie. not given output from other filter."
+  (if (listp input)
+      (let ((tag-maker (cadr proc)))
+        (zencoding-transform-ast input tag-maker))
+    nil))
+
+(defun zencoding-process-filter (filters input)
+  "Process filters, chain one filter output as the input of the next filter."
+  (let ((filter-data (member (car filters) zencoding-filters))
+        (more-filters (cdr filters)))
+    (if filter-data
+        (let* ((proc   (cadr filter-data))
+               (fun    (car proc))
+               (filter-output (funcall fun input proc)))
+          (if more-filters
+              (zencoding-process-filter more-filters filter-output)
+            filter-output))
+      nil)))
+
+(defun zencoding-make-tag (tag-maker tag-info &optional content)
+  "Extract tag info and pass them to tag-maker."
+  (let* ((name      (pop tag-info))
+         (has-body? (pop tag-info))
+         (id        (pop tag-info))
+         (classes   (pop tag-info))
+         (props     (pop tag-info))
+         (self-closing? (not (or content
+                                 (and has-body?
+                                      (not (member name zencoding-self-closing-tags)))))))
+    (funcall tag-maker name id classes props self-closing?
+             (if content content
+               (if zencoding-leaf-function (funcall zencoding-leaf-function))))))
+
+(defun zencoding-make-html-tag (tag-name tag-id tag-classes tag-props self-closing? content)
+  "Create HTML markup string"
+  (let* ((id      (zencoding-concat-or-empty " id=\"" tag-id "\""))
+         (classes (zencoding-mapconcat-or-empty " class=\"" tag-classes " " "\""))
+         (props   (zencoding-mapconcat-or-empty " " tag-props " " nil
+                                                (lambda (prop)
+                                                  (concat (symbol-name (car prop)) "=\"" (cadr prop) "\""))))
+         (content-multiline? (and content (string-match "\n" content)))
+         (block-tag? (or (member tag-name zencoding-block-tags)
+                         (and (> (length tag-name) 1)
+                              (not (member tag-name zencoding-inline-tags)))))
+         (lf (if (or content-multiline? block-tag?)
+                 "\n")))
+    (concat "<" tag-name id classes props (if self-closing?
+                                              "/>"
+                                            (concat ">" (if content
+                                                            (if (or content-multiline? block-tag?)
+                                                                (zencoding-indent content)
+                                                              content))
+                                                    lf
+                                                    "</" tag-name ">")))))
+
+(defun zencoding-make-commented-html-tag (tag-name tag-id tag-classes tag-props self-closing? content)
+  "Create HTML markup string with extra comments for elements with #id or .classes"
+  (let ((body (zencoding-make-html-tag tag-name tag-id tag-classes tag-props self-closing? content)))
+    (if (or tag-id tag-classes)
+        (let ((id      (zencoding-concat-or-empty "#" tag-id))
+              (classes (zencoding-mapconcat-or-empty "." tag-classes ".")))
+          (concat "<!-- " id classes " -->\n"
+                  body
+                  "\n<!-- /" id classes " -->"))
+      body)))
+
+(defun zencoding-make-haml-tag (tag-name tag-id tag-classes tag-props self-closing? content)
+  "Create HAML string"
+  (let ((name    (if (and (equal tag-name "div")
+                          (or tag-id tag-classes))
+                     ""
+                   (concat "%" tag-name)))
+        (id      (zencoding-concat-or-empty "#" tag-id))
+        (classes (zencoding-mapconcat-or-empty "." tag-classes "."))
+        (props   (zencoding-mapconcat-or-empty "{" tag-props ", " "}"
+                                               (lambda (prop)
+                                                 (concat ":" (symbol-name (car prop)) " => \"" (cadr prop) "\"")))))
+    (concat name id classes props (if content
+                                      (zencoding-indent content)))))
+
+(defun zencoding-make-hiccup-tag (tag-name tag-id tag-classes tag-props self-closing? content)
+  "Create Hiccup string"
+  (let* ((id      (zencoding-concat-or-empty "#" tag-id))
+         (classes (zencoding-mapconcat-or-empty "." tag-classes "."))
+         (props   (zencoding-mapconcat-or-empty " {" tag-props ", " "}"
+                                                (lambda (prop)
+                                                  (concat ":" (symbol-name (car prop)) " \"" (cadr prop) "\""))))
+         (content-multiline? (and content (string-match "\n" content)))
+         (block-tag? (or (member tag-name zencoding-block-tags)
+                         (and (> (length tag-name) 1)
+                              (not (member tag-name zencoding-inline-tags))))))
+    (concat "[:" tag-name id classes props
+            (if content
+                (if (or content-multiline? block-tag?)
+                    (zencoding-indent content)
+                  (concat " " content)))
+            "]")))
+
+(defun zencoding-concat-or-empty (prefix body &optional suffix)
+  "Return prefixed suffixed text or empty string."
+  (if body
+      (concat prefix body suffix)
+    ""))
+
+(defun zencoding-mapconcat-or-empty (prefix list-body delimiter &optional suffix map-fun)
+  "Return prefixed suffixed mapconcated text or empty string."
+  (if list-body
+      (let* ((mapper (if map-fun map-fun 'identity))
+             (body (mapconcat mapper list-body delimiter)))
+        (concat prefix body suffix))
+    ""))
+
+(defun zencoding-escape-xml (input proc)
+  "Escapes XML-unsafe characters: <, > and &."
+  (replace-regexp-in-string
+   "<" "&lt;"
+   (replace-regexp-in-string
+    ">" "&gt;"
+    (replace-regexp-in-string
+     "&" "&amp;"
+     (if (stringp input)
+         input
+       (zencoding-process-filter (zencoding-default-filter) input))))))
+
+(defun zencoding-transform (ast-with-filters)
+  "Transform AST (containing filter data) into string."
+  (let ((filters (cadr ast-with-filters))
+        (ast (caddr ast-with-filters)))
+    (zencoding-process-filter filters ast)))
+
+(defun zencoding-transform-ast (ast tag-maker)
+  "Transform AST (without filter data) into string."
+  (let ((type (car ast)))
+    (cond
+     ((eq type 'list)
+      (mapconcat (lexical-let ((make-tag-fun tag-maker))
+                   #'(lambda (sub-ast)
+                       (zencoding-transform-ast sub-ast make-tag-fun)))
+                 (cadr ast)
+                 "\n"))
+     ((eq type 'tag)
+      (zencoding-make-tag tag-maker (cadr ast)))
+     ((eq type 'parent-child)
+      (let ((parent (cadadr ast))
+            (children (zencoding-transform-ast (caddr ast) tag-maker)))
+        (zencoding-make-tag tag-maker parent children)))
+     ((eq type 'sibling)
+      (let ((sib1 (zencoding-transform-ast (cadr ast) tag-maker))
+            (sib2 (zencoding-transform-ast (caddr ast) tag-maker)))
+        (concat sib1 "\n" sib2))))))
+
+(defun zencoding-indent (text)
+  "Indent the text"
+  (if text
+      (replace-regexp-in-string "\n" "\n    " (concat "\n" text))
+    nil))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Test-cases
+
+(defun zencoding-test-cases ()
+  (let ((tests '(;; Tags
+                 ("a"                      "<a></a>")
+                 ("a.x"                    "<a class=\"x\"></a>")
+                 ("a#q.x"                  "<a id=\"q\" class=\"x\"></a>")
+                 ("a#q.x.y.z"              "<a id=\"q\" class=\"x y z\"></a>")
+                 ("#q"                     "<div id=\"q\">"
+                                           "</div>")
+                 (".x"                     "<div class=\"x\">"
+                                           "</div>")
+                 ("#q.x"                   "<div id=\"q\" class=\"x\">"
+                                           "</div>")
+                 ("#q.x.y.z"               "<div id=\"q\" class=\"x y z\">"
+                                           "</div>")
+                 ;; Empty tags
+                 ("a/"                     "<a/>")
+                 ("a/.x"                   "<a class=\"x\"/>")
+                 ("a/#q.x"                 "<a id=\"q\" class=\"x\"/>")
+                 ("a/#q.x.y.z"             "<a id=\"q\" class=\"x y z\"/>")
+                 ;; Self-closing tags
+                 ("input type=text"        "<input type=\"text\"/>")
+                 ("img"                    "<img/>")
+                 ("img>metadata/*2"        "<img>"
+                                           "    <metadata/>"
+                                           "    <metadata/>"
+                                           "</img>")
+                 ;; Siblings
+                 ("a+b"                    "<a></a>"
+                                           "<b></b>")
+                 ("a+b+c"                  "<a></a>"
+                                           "<b></b>"
+                                           "<c></c>")
+                 ("a.x+b"                  "<a class=\"x\"></a>"
+                                           "<b></b>")
+                 ("a#q.x+b"                "<a id=\"q\" class=\"x\"></a>"
+                                           "<b></b>")
+                 ("a#q.x.y.z+b"            "<a id=\"q\" class=\"x y z\"></a>"
+                                           "<b></b>")
+                 ("a#q.x.y.z+b#p.l.m.n"    "<a id=\"q\" class=\"x y z\"></a>"
+                                           "<b id=\"p\" class=\"l m n\"></b>")
+                 ;; Tag expansion
+                 ("table+"                 "<table>"
+                                           "    <tr>"
+                                           "        <td>"
+                                           "        </td>"
+                                           "    </tr>"
+                                           "</table>")
+                 ("dl+"                    "<dl>"
+                                           "    <dt></dt>"
+                                           "    <dd></dd>"
+                                           "</dl>")
+                 ("ul+"                    "<ul>"
+                                           "    <li></li>"
+                                           "</ul>")
+                 ("ul++ol+"                "<ul>"
+                                           "    <li></li>"
+                                           "</ul>"
+                                           "<ol>"
+                                           "    <li></li>"
+                                           "</ol>")
+                 ("ul#q.x.y m=l+"          "<ul id=\"q\" class=\"x y\" m=\"l\">"
+                                           "    <li></li>"
+                                           "</ul>")
+                 ;; Parent > child
+                 ("a>b"                    "<a><b></b></a>")
+                 ("a>b>c"                  "<a><b><c></c></b></a>")
+                 ("a.x>b"                  "<a class=\"x\"><b></b></a>")
+                 ("a#q.x>b"                "<a id=\"q\" class=\"x\"><b></b></a>")
+                 ("a#q.x.y.z>b"            "<a id=\"q\" class=\"x y z\"><b></b></a>")
+                 ("a#q.x.y.z>b#p.l.m.n"    "<a id=\"q\" class=\"x y z\"><b id=\"p\" class=\"l m n\"></b></a>")
+                 ("#q>.x"                  "<div id=\"q\">"
+                                           "    <div class=\"x\">"
+                                           "    </div>"
+                                           "</div>")
+                 ("a>b+c"                  "<a>"
+                                           "    <b></b>"
+                                           "    <c></c>"
+                                           "</a>")
+                 ("a>b+c>d"                "<a>"
+                                           "    <b></b>"
+                                           "    <c><d></d></c>"
+                                           "</a>")
+                 ;; Multiplication
+                 ("a*1"                    "<a></a>")
+                 ("a*2"                    "<a></a>"
+                                           "<a></a>")
+                 ("a/*2"                   "<a/>"
+                                           "<a/>")
+                 ("a*2+b*2"                "<a></a>"
+                                           "<a></a>"
+                                           "<b></b>"
+                                           "<b></b>")
+                 ("a*2>b*2"                "<a>"
+                                           "    <b></b>"
+                                           "    <b></b>"
+                                           "</a>"
+                                           "<a>"
+                                           "    <b></b>"
+                                           "    <b></b>"
+                                           "</a>")
+                 ("a>b*2"                  "<a>"
+                                           "    <b></b>"
+                                           "    <b></b>"
+                                           "</a>")
+                 ("a#q.x>b#q.x*2"          "<a id=\"q\" class=\"x\">"
+                                           "    <b id=\"q\" class=\"x\"></b>"
+                                           "    <b id=\"q\" class=\"x\"></b>"
+                                           "</a>")
+                 ("a#q.x>b/#q.x*2"         "<a id=\"q\" class=\"x\">"
+                                           "    <b id=\"q\" class=\"x\"/>"
+                                           "    <b id=\"q\" class=\"x\"/>"
+                                           "</a>")
+                 ;; Properties
+                 ("a x"                    "<a x=\"\"></a>")
+                 ("a x="                   "<a x=\"\"></a>")
+                 ("a x=\"\""               "<a x=\"\"></a>")
+                 ("a x=y"                  "<a x=\"y\"></a>")
+                 ("a x=\"y\""              "<a x=\"y\"></a>")
+                 ("a x=\"()\""             "<a x=\"()\"></a>")
+                 ("a x m"                  "<a x=\"\" m=\"\"></a>")
+                 ("a x= m=\"\""            "<a x=\"\" m=\"\"></a>")
+                 ("a x=y m=l"              "<a x=\"y\" m=\"l\"></a>")
+                 ("a/ x=y m=l"             "<a x=\"y\" m=\"l\"/>")
+                 ("a#foo x=y m=l"          "<a id=\"foo\" x=\"y\" m=\"l\"></a>")
+                 ("a.foo x=y m=l"          "<a class=\"foo\" x=\"y\" m=\"l\"></a>")
+                 ("a#foo.bar.mu x=y m=l"   "<a id=\"foo\" class=\"bar mu\" x=\"y\" m=\"l\"></a>")
+                 ("a/#foo.bar.mu x=y m=l"  "<a id=\"foo\" class=\"bar mu\" x=\"y\" m=\"l\"/>")
+                 ("a x=y+b"                "<a x=\"y\"></a>"
+                                           "<b></b>")
+                 ("a x=y+b x=y"            "<a x=\"y\"></a>"
+                                           "<b x=\"y\"></b>")
+                 ("a x=y>b"                "<a x=\"y\"><b></b></a>")
+                 ("a x=y>b x=y"            "<a x=\"y\"><b x=\"y\"></b></a>")
+                 ("a x=y>b x=y+c x=y"      "<a x=\"y\">"
+                                           "    <b x=\"y\"></b>"
+                                           "    <c x=\"y\"></c>"
+                                           "</a>")
+                 ;; Parentheses
+                 ("(a)"                    "<a></a>")
+                 ("(a)+(b)"                "<a></a>"
+                                           "<b></b>")
+                 ("a>(b)"                  "<a><b></b></a>")
+                 ("(a>b)>c"                "<a><b></b></a>")
+                 ("(a>b)+c"                "<a><b></b></a>"
+                                           "<c></c>")
+                 ("z+(a>b)+c+k"            "<z></z>"
+                                           "<a><b></b></a>"
+                                           "<c></c>"
+                                           "<k></k>")
+                 ("(a)*2"                  "<a></a>"
+                                           "<a></a>")
+                 ("((a)*2)"                "<a></a>"
+                                           "<a></a>")
+                 ("((a))*2"                "<a></a>"
+                                           "<a></a>")
+                 ("(a>b)*2"                "<a><b></b></a>"
+                                           "<a><b></b></a>")
+                 ("(a+b)*2"                "<a></a>"
+                                           "<b></b>"
+                                           "<a></a>"
+                                           "<b></b>")
+                 ;; Filter: comment
+                 ("a.b|c"                  "<!-- .b -->"
+                                           "<a class=\"b\"></a>"
+                                           "<!-- /.b -->")
+                 ("#a>.b|c"                "<!-- #a -->"
+                                           "<div id=\"a\">"
+                                           "    <!-- .b -->"
+                                           "    <div class=\"b\">"
+                                           "    </div>"
+                                           "    <!-- /.b -->"
+                                           "</div>"
+                                           "<!-- /#a -->")
+                 ;; Filter: HAML
+                 ("a|haml"                 "%a")
+                 ("a#q.x.y.z|haml"         "%a#q.x.y.z")
+                 ("a#q.x x=y m=l|haml"     "%a#q.x{:x => \"y\", :m => \"l\"}")
+                 ("div|haml"               "%div")
+                 ("div.footer|haml"        ".footer")
+                 (".footer|haml"           ".footer")
+                 ("p>a href=#+br|haml"     "%p"
+                                           "    %a{:href => \"#\"}"
+                                           "    %br")
+                 ;; Filter: Hiccup
+                 ("a|hic"                  "[:a]")
+                 ("a#q.x.y.z|hic"          "[:a#q.x.y.z]")
+                 ("a#q.x x=y m=l|hic"      "[:a#q.x {:x \"y\", :m \"l\"}]")
+                 (".footer|hic"            "[:div.footer]")
+                 ("p>a href=#+br|hic"      "[:p"
+                                           "    [:a {:href \"#\"}]"
+                                           "    [:br]]")
+                 ("#q>(a*2>b)+p>b|hic"     "[:div#q"
+                                           "    [:a [:b]]"
+                                           "    [:a [:b]]"
+                                           "    [:p"
+                                           "        [:b]]]")
+                 ;; Filter: escape
+                 ("script src=&quot;|e"    "&lt;script src=\"&amp;quot;\"&gt;"
+                                           "&lt;/script&gt;")
+                 )))
+    (mapc (lambda (input)
+            (let ((expected (mapconcat 'identity (cdr input) "\n"))
+                  (actual (zencoding-transform (car (zencoding-expr (car input))))))
+              (if (not (equal expected actual))
+                  (error (concat "Assertion " (car input) " failed:"
+                                 expected
+                                 " == "
+                                 actual)))))
+            tests)
+    (concat (number-to-string (length tests)) " tests performed. All OK.")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Zencoding minor mode
+
+(defgroup zencoding nil
+  "Customization group for zencoding-mode."
+  :group 'convenience)
+
+(defun zencoding-expr-on-line ()
+  "Extract a zencoding expression and the corresponding bounds
+   for the current line."
+  (let* ((start (line-beginning-position))
+         (end (line-end-position))
+         (line (buffer-substring-no-properties start end))
+         (expr (zencoding-regex "\\([ \t]*\\)\\([^\n]+\\)" line 2)))
+    (if (first expr)
+        (list (first expr) start end))))
+
+(defcustom zencoding-indentation 4
+  "Number of spaces used for indentation."
+  :type '(number :tag "Spaces")
+  :group 'zencoding)
+
+(defun zencoding-prettify (markup indent)
+  (let ((first-col (format (format "%%%ds" indent) ""))
+        (tab       (format (format "%%%ds" zencoding-indentation) "")))
+    (concat first-col
+            (replace-regexp-in-string "\n" (concat "\n" first-col)
+                                      (replace-regexp-in-string "    " tab markup)))))
+
+;;;###autoload
+(defun zencoding-expand-line (arg)
+  "Replace the current line's zencode expression with the corresponding expansion.
+If prefix ARG is given or region is visible call `zencoding-preview' to start an
+interactive preview.
+
+Otherwise expand line directly.
+
+For more information see `zencoding-mode'."
+  (interactive "P")
+  (let* ((here (point))
+         (preview (if zencoding-preview-default (not arg) arg))
+         (beg (if preview
+                  (progn
+                    (beginning-of-line)
+                    (skip-chars-forward " \t")
+                    (point))
+                (when mark-active (region-beginning))))
+         (end (if preview
+                  (progn
+                    (end-of-line)
+                    (skip-chars-backward " \t")
+                    (point))
+                (when mark-active (region-end)))))
+    (if beg
+        (progn
+          (goto-char here)
+          (zencoding-preview beg end))
+      (let ((expr (zencoding-expr-on-line)))
+        (if expr
+            (let* ((markup (zencoding-transform (car (zencoding-expr (first expr)))))
+                   (pretty (zencoding-prettify markup (current-indentation))))
+              (save-excursion
+                (delete-region (second expr) (third expr))
+                (zencoding-insert-and-flash pretty))))))))
+
+(defvar zencoding-mode-keymap nil
+  "Keymap for zencode minor mode.")
+
+(if zencoding-mode-keymap
+    nil
+  (progn
+    (setq zencoding-mode-keymap (make-sparse-keymap))
+    (define-key zencoding-mode-keymap (kbd "C-j") 'zencoding-expand-line)
+    (define-key zencoding-mode-keymap (kbd "<C-return>") 'zencoding-expand-line)))
+
+;;;###autoload
+(define-minor-mode zencoding-mode
+  "Minor mode for writing HTML and CSS markup.
+With zen coding for HTML and CSS you can write a line like
+
+  ul#name>li.item*2
+
+and have it expanded to
+
+  <ul id=\"name\">
+    <li class=\"item\"></li>
+    <li class=\"item\"></li>
+  </ul>
+
+This minor mode defines keys for quick access:
+
+\\{zencoding-mode-keymap}
+
+Home page URL `http://www.emacswiki.org/emacs/ZenCoding'.
+
+See also `zencoding-expand-line'."
+  :lighter " Zen"
+  :keymap zencoding-mode-keymap)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Zencoding yasnippet integration
+
+(defun zencoding-transform-yas (ast)
+  (let* ((leaf-count 0)
+         (zencoding-leaf-function
+          (lambda ()
+            (format "$%d" (incf leaf-count)))))
+    (zencoding-transform ast)))
+
+;;;###autoload
+(defun zencoding-expand-yas ()
+  (interactive)
+  (let ((expr (zencoding-expr-on-line)))
+    (if expr
+        (let* ((markup (zencoding-transform-yas (car (zencoding-expr (first expr)))))
+               (filled (replace-regexp-in-string "><" ">\n<" markup)))
+          (delete-region (second expr) (third expr))
+          (insert filled)
+          (indent-region (second expr) (point))
+          (yas/expand-snippet
+           (buffer-substring (second expr) (point))
+           (second expr) (point))))))
 
 
-        <script type="text/javascript" charset="utf-8">
-      GitHub.spy({
-        repo: "chrisdone/zencoding"
-      })
-    </script>
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Real-time preview
+;;
 
-    
+;;;;;;;;;;
+;; Lennart's version
 
-        <script type="text/javascript">
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-3769691-2']);
-      _gaq.push(['_setDomainName', 'none']);
-      _gaq.push(['_trackPageview']);
-      (function() {
-        var ga = document.createElement('script');
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        ga.setAttribute('async', 'true');
-        document.documentElement.firstChild.appendChild(ga);
-      })();
-    </script>
+(defvar zencoding-preview-input nil)
+(make-local-variable 'zencoding-preview-input)
+(defvar zencoding-preview-output nil)
+(make-local-variable 'zencoding-preview-output)
+(defvar zencoding-old-show-paren nil)
+(make-local-variable 'zencoding-old-show-paren)
 
-    
-  </head>
+(defface zencoding-preview-input
+  '((default :box t :inherit secondary-selection))
+  "Face for preview input field."
+  :group 'zencoding)
 
-  
+(defface zencoding-preview-output
+  '((default :inherit highlight))
+  "Face for preview output field."
+  :group 'zencoding)
 
-  <body class="logged_out ">
-    
+(defvar zencoding-preview-keymap
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'zencoding-preview-accept)
+    (define-key map (kbd "<return>") 'zencoding-preview-accept)
+    (define-key map [(control ?g)] 'zencoding-preview-abort)
+    map))
 
-    
+(defun zencoding-preview-accept ()
+  (interactive)
+  (let ((ovli zencoding-preview-input))
+    (if (not (and (overlayp ovli)
+                  (bufferp (overlay-buffer ovli))))
+        (message "Preview is not active")
+      (let* ((indent (current-indentation))
+             (markup (zencoding-preview-transformed indent)))
+        (when markup
+          (delete-region (line-beginning-position) (overlay-end ovli))
+          (zencoding-insert-and-flash markup)))))
+  (zencoding-preview-abort))
 
-    
+(defvar zencoding-flash-ovl nil)
+(make-variable-buffer-local 'zencoding-flash-ovl)
 
-    
+(defun zencoding-remove-flash-ovl (buf)
+  (with-current-buffer buf
+    (when (overlayp zencoding-flash-ovl)
+      (delete-overlay zencoding-flash-ovl))
+    (setq zencoding-flash-ovl nil)))
 
-    
+(defcustom zencoding-preview-default t
+  "If non-nil then preview is the default action.
+This determines how `zencoding-expand-line' works by default."
+  :type 'boolean
+  :group 'zencoding)
 
-    <div class="" id="main">
-      <div id="header" class="true">
-        
-          <a class="logo boring" href="https://github.com">
-            <img src="/images/modules/header/logov3.png?changed" class="default" alt="github" />
-            <!--[if (gt IE 8)|!(IE)]><!-->
-            <img src="/images/modules/header/logov3-hover.png" class="hover" alt="github" />
-            <!--<![endif]-->
-          </a>
-        
-        
-        <div class="topsearch">
-  
-    <ul class="nav logged_out">
-      <li class="pricing"><a href="/plans">Pricing and Signup</a></li>
-      <li class="explore"><a href="/explore">Explore GitHub</a></li>
-      <li class="features"><a href="/features">Features</a></li>
-      <li class="blog"><a href="/blog">Blog</a></li>
-      <li class="login"><a href="/login?return_to=https://github.com/chrisdone/zencoding/raw/master/zencoding-mode.el">Login</a></li>
-    </ul>
-  
-</div>
+(defcustom zencoding-insert-flash-time 0.5
+  "Time to flash insertion.
+Set this to a negative number if you do not want flashing the
+expansion after insertion."
+  :type '(number :tag "Seconds")
+  :group 'zencoding)
 
-      </div>
+(defun zencoding-insert-and-flash (markup)
+  (zencoding-remove-flash-ovl (current-buffer))
+  (let ((here (point)))
+    (insert markup)
+    (setq zencoding-flash-ovl (make-overlay here (point)))
+    (overlay-put zencoding-flash-ovl 'face 'zencoding-preview-output)
+    (when (< 0 zencoding-insert-flash-time)
+      (run-with-idle-timer zencoding-insert-flash-time
+                           nil 'zencoding-remove-flash-ovl (current-buffer)))))
 
-      
-      
-        <div class="site">
-          
+;;;###autoload
+(defun zencoding-preview (beg end)
+  "Expand zencode between BEG and END interactively.
+This will show a preview of the expanded zen code and you can
+accept it or skip it."
+  (interactive (if mark-active
+                   (list (region-beginning) (region-end))
+                 (list nil nil)))
+  (zencoding-preview-abort)
+  (if (not beg)
+      (message "Region not active")
+    (setq zencoding-old-show-paren show-paren-mode)
+    (show-paren-mode -1)
+    (let ((here (point)))
+      (goto-char beg)
+      (forward-line 1)
+      (unless (= 0 (current-column))
+        (insert "\n"))
+      (let* ((opos (point))
+             (ovli (make-overlay beg end nil nil t))
+             (ovlo (make-overlay opos opos))
+             (info (propertize " Zen preview. Choose with RET. Cancel by stepping out. \n"
+                               'face 'tooltip)))
+        (overlay-put ovli 'face 'zencoding-preview-input)
+        (overlay-put ovli 'keymap zencoding-preview-keymap)
+        (overlay-put ovlo 'face 'zencoding-preview-output)
+        (overlay-put ovlo 'before-string info)
+        (setq zencoding-preview-input  ovli)
+        (setq zencoding-preview-output ovlo)
+        (add-hook 'before-change-functions 'zencoding-preview-before-change t t)
+        (goto-char here)
+        (add-hook 'post-command-hook 'zencoding-preview-post-command t t)))))
 
-<style type="text/css">
-    * {
-        margin: 0px;
-        padding: 0px;
-    }
-    #parallax_illustration {
-        display:block;
-        width: 940px;
-        height: 375px;
-        margin: 20px 0 0 20px;
-        position: relative;
-        overflow: hidden;
-    }
-    #parallax_illustration #parallax_error_text {
-        position: absolute;
-        top: 72px;
-        left: 72px;
-        z-index: 10;
-    }
-    #parallax_illustration #parallax_octocat {
-        position: absolute;
-        top: 94px;
-        left: 356px;
-        z-index: 9;
-    }
-    #parallax_illustration #parallax_speeder {
-        position: absolute;
-        top: 150px;
-        left: 432px;
-        z-index: 8;
-    }
-    #parallax_illustration #parallax_octocatshadow {
-        position: absolute;
-        top: 297px;
-        left: 371px;
-        z-index: 7;
-    }
-    #parallax_illustration #parallax_speedershadow {
-        position: absolute;
-        top: 263px;
-        left: 442px;
-        z-index: 6;
-    }
-    #parallax_illustration #parallax_building_1 {
-        position: absolute;
-        top: 73px;
-        left: 457px;
-        z-index: 5;
-    }
-    #parallax_illustration #parallax_building_2 {
-        position: absolute;
-        top: 113px;
-        left: 742px;
-        z-index: 4;
-    }
-    #parallax_illustration #parallax_bg {
-        position: absolute;
-        top: 0px;
-        left: 0px;
-        z-index: 1;
-    }
-</style>
+(defvar zencoding-preview-pending-abort nil)
+(make-variable-buffer-local 'zencoding-preview-pending-abort)
 
-<script type="application/javascript">
-    // Detect if the browser is IE or not.
-    // If it is not IE, we assume that the browser is NS.
-    var IE = document.all?true:false;
+(defun zencoding-preview-before-change (beg end)
+  (when
+      (or (> beg (overlay-end zencoding-preview-input))
+          (< beg (overlay-start zencoding-preview-input))
+          (> end (overlay-end zencoding-preview-input))
+          (< end (overlay-start zencoding-preview-input)))
+    (setq zencoding-preview-pending-abort t)))
 
-    // If NS -- that is, !IE -- then set up for mouse capture
-    if (!IE) document.captureEvents(Event.MOUSEMOVE);
+(defun zencoding-preview-abort ()
+  "Abort zen code preview."
+  (interactive)
+  (setq zencoding-preview-pending-abort nil)
+  (remove-hook 'before-change-functions 'zencoding-preview-before-change t)
+  (when (overlayp zencoding-preview-input)
+    (delete-overlay zencoding-preview-input))
+  (setq zencoding-preview-input nil)
+  (when (overlayp zencoding-preview-output)
+    (delete-overlay zencoding-preview-output))
+  (setq zencoding-preview-output nil)
+  (remove-hook 'post-command-hook 'zencoding-preview-post-command t)
+  (when zencoding-old-show-paren (show-paren-mode 1)))
 
-    // Temporary variables to hold mouse x-y pos.s
-    var tempX = 0;
-    var tempY = 0;
+(defun zencoding-preview-post-command ()
+  (condition-case err
+      (zencoding-preview-post-command-1)
+    (error (message "zencoding-preview-post: %s" err))))
 
-    // Set original item positions
-    var originalOctocatX = 0;
-    var originalSignX = 0;
-    var originalErrorTextX = 0;
+(defun zencoding-preview-post-command-1 ()
+  (if (and (not zencoding-preview-pending-abort)
+           (<= (point) (overlay-end zencoding-preview-input))
+           (>= (point) (overlay-start zencoding-preview-input)))
+      (zencoding-update-preview (current-indentation))
+    (zencoding-preview-abort)))
 
+(defun zencoding-preview-transformed (indent)
+  (let* ((string (buffer-substring-no-properties
+		  (overlay-start zencoding-preview-input)
+		  (overlay-end zencoding-preview-input)))
+	 (ast    (car (zencoding-expr string))))
+    (when (not (eq ast 'error))
+      (let ((output (zencoding-transform ast)))
+        (when output
+          (zencoding-prettify output indent))))))
 
-    if (window.attachEvent) {
-        window.attachEvent('onload', init);
-    } else if (window.addEventListener) {
-        window.addEventListener('load', init, false);
-    } else {document.addEventListener('load', init, false);
-    }
+(defun zencoding-update-preview (indent)
+  (let* ((pretty (zencoding-preview-transformed indent))
+         (show (when pretty
+                 (propertize pretty 'face 'highlight))))
+    (when show
+      (overlay-put zencoding-preview-output 'after-string
+                   (concat show "\n")))))
 
-    function init() {
-        document.getElementById('parallax_illustration').addEventListener('mousemove',parallax,false);
-        originalErrorTextX = findPos(document.getElementById('parallax_error_text'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalErrorTextY = findPos(document.getElementById('parallax_error_text'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalOctocatX = findPos(document.getElementById('parallax_octocat'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalOctocatY = findPos(document.getElementById('parallax_octocat'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalOctocatShadowX = findPos(document.getElementById('parallax_octocatshadow'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalOctocatShadowY = findPos(document.getElementById('parallax_octocatshadow'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalSpeederX = findPos(document.getElementById('parallax_speeder'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalSpeederY = findPos(document.getElementById('parallax_speeder'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalSpeederShadowX = findPos(document.getElementById('parallax_speedershadow'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalSpeederShadowY = findPos(document.getElementById('parallax_speedershadow'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalBuilding1X = findPos(document.getElementById('parallax_building_1'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalBuilding1Y = findPos(document.getElementById('parallax_building_1'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalBuilding2X = findPos(document.getElementById('parallax_building_2'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalBuilding2Y = findPos(document.getElementById('parallax_building_2'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-        originalParallaxBGX = findPos(document.getElementById('parallax_bg'))[0]-findPos(document.getElementById('parallax_illustration'))[0];
-        originalParallaxBGY = findPos(document.getElementById('parallax_bg'))[1]-findPos(document.getElementById('parallax_illustration'))[1];
-    }
-    function parallax(e) {
-        var rollOverObj = document.getElementById('parallax_illustration');
-        var errorText = document.getElementById('parallax_error_text');
-        var octocat = document.getElementById('parallax_octocat');
-        var octocatShadow = document.getElementById('parallax_octocatshadow');
-        var speeder = document.getElementById('parallax_speeder');
-        var speederShadow = document.getElementById('parallax_speedershadow');
-        var building1 = document.getElementById('parallax_building_1');
-        var building2 = document.getElementById('parallax_building_2');
-        var parallaxBG = document.getElementById('parallax_bg');
-        var parallaxRootMouseX = 0;
-        var parallaxRootMouseY = 0;
-        var mousePerc = 0; // percentage distance across the rollover item.
-
-        var errorTextRangeX = 20;
-        var errorTextRangeY = 10;
-        var octocatRangeX = 10;
-        var octocatRangeY = 10;
-        var octocatShadowRangeX = 10;
-        var octocatShadowRangeY = 10;
-        var speederRangeX = 30;
-        var speederRangeY = 10;
-        var speederShadowRangeX = 30;
-        var speederShadowRangeY = 0;
-        var building1RangeX = 50;
-        var building1RangeY = 20;
-        var building2RangeX = 75;
-        var building2RangeY = 30;
-        var parallaxBGRangeX = 0;
-        var parallaxBGRangeY = 40;
-
-        var rollOverObj_x = findPos(rollOverObj)[0];
-        var rollOverObj_y = findPos(rollOverObj)[1];
-
-        // this portion of the script is based on a script from www.CodeLifter.com
-        if (IE) { // grab the x-y pos.s if browser is IE
-            tempX = event.clientX + document.body.scrollLeft;
-            tempY = event.clientY + document.body.scrollTop;
-        } else {  // grab the x-y pos.s if browser is NS
-            tempX = e.pageX;
-            tempY = e.pageY;
-        }
-        // catch possible negative values in NS4
-        if (tempX < 0){tempX = 0};
-        if (tempY < 0){tempY = 0};
-        // show the position values in the form named Show
-        // in the text fields named MouseX and MouseY
-        parallaxRootMouseX = tempX-rollOverObj_x;
-        parallaxRootMouseY = tempY-rollOverObj_y;
-        mousePercX = Math.round(((parallaxRootMouseX/940))*100)/100;
-        mousePercY = Math.round(((parallaxRootMouseY/375))*100)/100;
-
-        // Place items in the proper place allong their range.
-        errorText.style.left = ((originalErrorTextX-errorTextRangeX)+(errorTextRangeX*mousePercX))+'px';
-        errorText.style.top = ((originalErrorTextY)-(errorTextRangeY*mousePercY))+'px';
-        octocat.style.left = ((originalOctocatX-octocatRangeX)+(octocatRangeX*mousePercX))+'px';
-        octocat.style.top = ((originalOctocatY)-(octocatRangeY*mousePercY))+'px';
-        octocatShadow.style.left = ((originalOctocatShadowX-octocatShadowRangeX)+(octocatShadowRangeX*mousePercX))+'px';
-        octocatShadow.style.top = ((originalOctocatShadowY)-(octocatShadowRangeY*mousePercY))+'px';
-        speeder.style.left = ((originalSpeederX-speederRangeX)+(speederRangeX*mousePercX))+'px';
-        speeder.style.top = ((originalSpeederY)-(speederRangeY*mousePercY))+'px';
-        speederShadow.style.left = ((originalSpeederShadowX-speederShadowRangeX)+(speederShadowRangeX*mousePercX))+'px';
-        speederShadow.style.top = ((originalSpeederShadowY)-(speederShadowRangeY*mousePercY))+'px';
-        building1.style.left = ((originalBuilding1X-building1RangeX)+(building1RangeX*mousePercX))+'px';
-        building1.style.top = ((originalBuilding1Y)-(building1RangeY*mousePercY))+'px';
-        building2.style.left = ((originalBuilding2X-building2RangeX)+(building2RangeX*mousePercX))+'px';
-        building2.style.top = ((originalBuilding2Y)-(building2RangeY*mousePercY))+'px';
-        parallaxBG.style.left = ((originalParallaxBGX-parallaxBGRangeX)+(parallaxBGRangeX*mousePercX))+'px';
-        parallaxBG.style.top = ((originalParallaxBGY)-(parallaxBGRangeY*mousePercY))+'px';
-        trace('x_value', parallaxRootMouseX);
-        trace('y_value', parallaxRootMouseY);
-        trace('rollOverObj_percX', mousePercX);
-        trace('rollOverObj_percY', mousePercY);
-
-
-        return true;
-        //----------------------------- /www.CodeLifter.com modified script
-    }
-    function findPos(obj) {
-        var curleft = curtop = 0;
-        if (obj.offsetParent) {
-            do {
-                curleft += obj.offsetLeft;
-                curtop += obj.offsetTop;
-            } while (obj = obj.offsetParent);
-        return [curleft,curtop];
-        }
-    }
-
-    function trace(n,m) { // n is the new id for the text item, m is the value;
-    return
-        if( !document.getElementById(n) ){ // if n exists, change value, otherwise make n;
-            var newMessage = document.createTextNode(n.toUpperCase() + ': ' + m);
-            var newP = document.createElement('p');
-                newP.setAttribute('id', n);
-            newP.appendChild(newMessage);
-            document.getElementById('trace_box').appendChild(newP);
-
-        } else {
-            var targetNode = document.getElementById(n);
-            targetNode.innerHTML = n.toUpperCase() + ': ' + m;
-        }
-    }
-</script>
-
-<div id="parallax_illustration">
-  <img src="/images/modules/404/parallax_errortext.png" width="271" height="249" alt="404 | &ldquo;This is not the web page you are looking for&rdquo;" id="parallax_error_text"/>
-  <img src="/images/modules/404/parallax_octocat.png" width="188" height="230" alt="Octobi Wan Catnobi" id="parallax_octocat"/>
-  <img src="/images/modules/404/parallax_speeder.png" width="440" height="156" alt="land speeder" id="parallax_speeder"/>
-  <img src="/images/modules/404/parallax_octocatshadow.png" width="166" height="49" alt="Octobi Wan Catnobi's shadow" id="parallax_octocatshadow"/>
-  <img src="/images/modules/404/parallax_speedershadow.png" width="430" height="75" alt="land speeder's shadow" id="parallax_speedershadow"/>
-  <img src="/images/modules/404/parallax_building_1.png" width="304" height="123" alt="building" id="parallax_building_1"/>
-  <img src="/images/modules/404/parallax_building_2.png" width="116" height="50" alt="building" id="parallax_building_2"/>
-  <img src="/images/modules/404/parallax_bg.jpg" width="940" height="415" alt="building" id="parallax_bg"/>
-</div>
-
-<script type="text/javascript">
-  _gaq.push(['_trackPageview', '/404.html?page=' + document.location.pathname + document.location.search + '&from=' + document.referrer])
-</script>
-
-        </div>
-      
-    </div>
-
-    <div id="footer" class="clearfix">
-      <div class="site">
-        <div class="sponsor">
-          <a href="http://www.rackspace.com" class="logo">
-            <img alt="Dedicated Server" src="https://assets1.github.com/images/modules/footer/rackspace_logo.png?v2?42a88d59f4e6454178639ad0cc38846a091c9551" />
-          </a>
-          Powered by the <a href="http://www.rackspace.com ">Dedicated
-          Servers</a> and<br/> <a href="http://www.rackspacecloud.com">Cloud
-          Computing</a> of Rackspace Hosting<span>&reg;</span>
-        </div>
-
-        <ul class="links">
-          <li class="blog"><a href="https://github.com/blog">Blog</a></li>
-          <li><a href="http://support.github.com">Support</a></li>
-          <li><a href="https://github.com/training">Training</a></li>
-          <li><a href="http://jobs.github.com">Job Board</a></li>
-          <li><a href="http://shop.github.com">Shop</a></li>
-          <li><a href="https://github.com/contact">Contact</a></li>
-          <li><a href="http://develop.github.com">API</a></li>
-          <li><a href="http://status.github.com">Status</a></li>
-        </ul>
-        <ul class="sosueme">
-          <li class="main">&copy; 2011 <span id="_rrt" title="0.03473s from fe6.rs.github.com">GitHub</span> Inc. All rights reserved.</li>
-          <li><a href="/site/terms">Terms of Service</a></li>
-          <li><a href="/site/privacy">Privacy</a></li>
-          <li><a href="https://github.com/security">Security</a></li>
-        </ul>
-      </div>
-    </div><!-- /#footer -->
-
-    
-      
-      
-        <!-- current locale:  -->
-        <div class="locales">
-          <div class="site">
-
-            <ul class="choices clearfix limited-locales">
-              <li><span class="current">English</span></li>
-              
-                  <li><a rel="nofollow" href="?locale=de">Deutsch</a></li>
-              
-                  <li><a rel="nofollow" href="?locale=fr">Français</a></li>
-              
-                  <li><a rel="nofollow" href="?locale=ja">日本語</a></li>
-              
-                  <li><a rel="nofollow" href="?locale=pt-BR">Português (BR)</a></li>
-              
-                  <li><a rel="nofollow" href="?locale=ru">Русский</a></li>
-              
-                  <li><a rel="nofollow" href="?locale=zh">中文</a></li>
-              
-              <li class="all"><a href="#" class="minibutton btn-forward js-all-locales"><span><span class="icon"></span>See all available languages</span></a></li>
-            </ul>
-
-            <div class="all-locales clearfix">
-              <h3>Your current locale selection: <strong>English</strong>. Choose another?</h3>
-              
-              
-                <ul class="choices">
-                  
-                      <li><a rel="nofollow" href="?locale=en">English</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=af">Afrikaans</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=ca">Català</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=cs">Čeština</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=de">Deutsch</a></li>
-                  
-                </ul>
-              
-                <ul class="choices">
-                  
-                      <li><a rel="nofollow" href="?locale=es">Español</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=fr">Français</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=hr">Hrvatski</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=hu">Magyar</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=id">Indonesia</a></li>
-                  
-                </ul>
-              
-                <ul class="choices">
-                  
-                      <li><a rel="nofollow" href="?locale=it">Italiano</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=ja">日本語</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=nl">Nederlands</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=no">Norsk</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=pl">Polski</a></li>
-                  
-                </ul>
-              
-                <ul class="choices">
-                  
-                      <li><a rel="nofollow" href="?locale=pt-BR">Português (BR)</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=ru">Русский</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=sr">Српски</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=sv">Svenska</a></li>
-                  
-                      <li><a rel="nofollow" href="?locale=zh">中文</a></li>
-                  
-                </ul>
-              
-            </div>
-
-          </div>
-          <div class="fade"></div>
-        </div>
-      
-    
-
-    <script>window._auth_token = "5196e3477fff41851360dba45485d23be212c506"</script>
-    
-
-<div id="keyboard_shortcuts_pane" style="display:none">
-  <h2>Keyboard Shortcuts <small><a href="#" class="js-see-all-keyboard-shortcuts">(see all)</a></small></h2>
-
-  <div class="columns threecols">
-    <div class="column first">
-      <h3>Site wide shortcuts</h3>
-      <dl class="keyboard-mappings">
-        <dt>s</dt>
-        <dd>Focus site search</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>?</dt>
-        <dd>Bring up this help dialog</dd>
-      </dl>
-    </div><!-- /.column.first -->
-
-    <div class="column middle" style='display:none'>
-      <h3>Commit list</h3>
-      <dl class="keyboard-mappings">
-        <dt>j</dt>
-        <dd>Move selected down</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>k</dt>
-        <dd>Move selected up</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>t</dt>
-        <dd>Open tree</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>p</dt>
-        <dd>Open parent</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>c <em>or</em> o <em>or</em> enter</dt>
-        <dd>Open commit</dd>
-      </dl>
-    </div><!-- /.column.first -->
-
-    <div class="column last" style='display:none'>
-      <h3>Pull request list</h3>
-      <dl class="keyboard-mappings">
-        <dt>j</dt>
-        <dd>Move selected down</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>k</dt>
-        <dd>Move selected up</dd>
-      </dl>
-      <dl class="keyboard-mappings">
-        <dt>o <em>or</em> enter</dt>
-        <dd>Open issue</dd>
-      </dl>
-    </div><!-- /.columns.last -->
-
-  </div><!-- /.columns.equacols -->
-
-  <div style='display:none'>
-    <div class="rule"></div>
-
-    <h3>Issues</h3>
-
-    <div class="columns threecols">
-      <div class="column first">
-        <dl class="keyboard-mappings">
-          <dt>j</dt>
-          <dd>Move selected down</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>k</dt>
-          <dd>Move selected up</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>x</dt>
-          <dd>Toggle select target</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>o <em>or</em> enter</dt>
-          <dd>Open issue</dd>
-        </dl>
-      </div><!-- /.column.first -->
-      <div class="column middle">
-        <dl class="keyboard-mappings">
-          <dt>I</dt>
-          <dd>Mark selected as read</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>U</dt>
-          <dd>Mark selected as unread</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>e</dt>
-          <dd>Close selected</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>y</dt>
-          <dd>Remove selected from view</dd>
-        </dl>
-      </div><!-- /.column.middle -->
-      <div class="column last">
-        <dl class="keyboard-mappings">
-          <dt>c</dt>
-          <dd>Create issue</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>l</dt>
-          <dd>Create label</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>i</dt>
-          <dd>Back to inbox</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>u</dt>
-          <dd>Back to issues</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>/</dt>
-          <dd>Focus issues search</dd>
-        </dl>
-      </div>
-    </div>
-  </div>
-
-  <div style='display:none'>
-    <div class="rule"></div>
-
-    <h3>Network Graph</h3>
-    <div class="columns equacols">
-      <div class="column first">
-        <dl class="keyboard-mappings">
-          <dt><span class="badmono">←</span> <em>or</em> h</dt>
-          <dd>Scroll left</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt><span class="badmono">→</span> <em>or</em> l</dt>
-          <dd>Scroll right</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt><span class="badmono">↑</span> <em>or</em> k</dt>
-          <dd>Scroll up</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt><span class="badmono">↓</span> <em>or</em> j</dt>
-          <dd>Scroll down</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>t</dt>
-          <dd>Toggle visibility of head labels</dd>
-        </dl>
-      </div><!-- /.column.first -->
-      <div class="column last">
-        <dl class="keyboard-mappings">
-          <dt>shift <span class="badmono">←</span> <em>or</em> shift h</dt>
-          <dd>Scroll all the way left</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>shift <span class="badmono">→</span> <em>or</em> shift l</dt>
-          <dd>Scroll all the way right</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>shift <span class="badmono">↑</span> <em>or</em> shift k</dt>
-          <dd>Scroll all the way up</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>shift <span class="badmono">↓</span> <em>or</em> shift j</dt>
-          <dd>Scroll all the way down</dd>
-        </dl>
-      </div><!-- /.column.last -->
-    </div>
-  </div>
-
-  <div >
-    <div class="rule"></div>
-
-    <h3>Source Code Browsing</h3>
-    <div class="columns threecols">
-      <div class="column first">
-        <dl class="keyboard-mappings">
-          <dt>t</dt>
-          <dd>Activates the file finder</dd>
-        </dl>
-        <dl class="keyboard-mappings">
-          <dt>l</dt>
-          <dd>Jump to line</dd>
-        </dl>
-      </div>
-    </div>
-  </div>
-
-</div>
-    
-
-    <!--[if IE 8]>
-    <script type="text/javascript" charset="utf-8">
-      $(document.body).addClass("ie8")
-    </script>
-    <![endif]-->
-
-    <!--[if IE 7]>
-    <script type="text/javascript" charset="utf-8">
-      $(document.body).addClass("ie7")
-    </script>
-    <![endif]-->
-
-    
-    <script type='text/javascript'></script>
-    
-  </body>
-</html>
+(provide 'zencoding-mode)
