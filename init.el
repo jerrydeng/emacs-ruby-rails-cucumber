@@ -243,5 +243,9 @@
 (require 'zencoding-mode)
 (add-hook 'sgml-mode-hook 'zencoding-mode) ;; Auto-start on any markup modes
 
+;; yasnippet code (ruby) completion
+(require 'yasnippet-bundle)
+(yas/load-directory "~/.emacs.d/snippets/")
+
 (provide 'init)
 ;;; init.el ends here
