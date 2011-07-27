@@ -247,5 +247,12 @@
 (require 'yasnippet-bundle)
 (yas/load-directory "~/.emacs.d/snippets/")
 
+;; load Sass SCSS mode
+(setq exec-path (cons (expand-file-name "~/.rvm/gems/ruby-1.9.2-p180@mweibo/gems/sass-3.1.4/bin") exec-path))
+(add-to-list 'load-path (expand-file-name "~/.emacs.d"))
+(autoload 'scss-mode "scss-mode")
+(add-to-list 'auto-mode-alist '("\\.scss\\'" . scss-mode))
+
+
 (provide 'init)
 ;;; init.el ends here
