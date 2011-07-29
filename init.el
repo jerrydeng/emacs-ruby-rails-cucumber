@@ -253,6 +253,9 @@
 (autoload 'scss-mode "scss-mode")
 (add-to-list 'auto-mode-alist '("\\.scss\\'" . scss-mode))
 
+;; load Clojure-mode
+(add-to-list 'load-path "~/.emacs.d/clojure-mode")
+(require 'clojure-mode)
 
 (provide 'init)
 ;;; init.el ends here
