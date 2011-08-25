@@ -1,6 +1,9 @@
 ;;; init.el --- Where all the magic begins
 ;;
 
+;; UTF-8
+(prefer-coding-system 'utf-8)
+
 ;; Benchmarking
 (defvar *emacs-load-start* (current-time))
 
@@ -147,7 +150,7 @@
 (yas/load-directory "~/.emacs.d/snippets/")
 
 ;; load Sass SCSS mode
-(setq exec-path (cons (expand-file-name "~/.rvm/gems/ruby-1.9.2-p180@mweibo/gems/sass-3.1.4/bin") exec-path))
+(setq exec-path (cons (expand-file-name "~/.rvm/gems/ruby-1.9.2-p290@weibo/gems/sass-3.1.7/bin") exec-path))
 (add-to-list 'load-path (expand-file-name "~/.emacs.d"))
 (autoload 'scss-mode "scss-mode")
 (add-to-list 'auto-mode-alist '("\\.scss\\'" . scss-mode))
@@ -155,6 +158,12 @@
 ;; load Clojure-mode
 (add-to-list 'load-path "~/.emacs.d/clojure-mode")
 (require 'clojure-mode)
+
+;; load Coffee-Script Mode
+(add-to-list 'load-path "~/.emacs.d/coffee-mode")
+(require 'coffee-mode)
+(add-to-list 'auto-mode-alist '("\\.coffee$" . coffee-mode))
+(add-to-list 'auto-mode-alist '("Cakefile" . coffee-mode))
 
 (provide 'init)
 ;;; init.el ends here
