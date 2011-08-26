@@ -165,5 +165,9 @@
 (add-to-list 'auto-mode-alist '("\\.coffee$" . coffee-mode))
 (add-to-list 'auto-mode-alist '("Cakefile" . coffee-mode))
 
+;; maximize screen on startup
+(require 'maxframe)
+(add-hook 'window-setup-hook 'maximize-frame t)
+
 (provide 'init)
 ;;; init.el ends here
