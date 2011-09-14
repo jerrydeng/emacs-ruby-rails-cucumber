@@ -169,5 +169,8 @@
 (require 'maxframe)
 (add-hook 'window-setup-hook 'maximize-frame t)
 
+;; x-copy to clipboard
+(setq x-select-enable-clipboard t)
+
 (provide 'init)
 ;;; init.el ends here
