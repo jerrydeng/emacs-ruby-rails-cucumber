@@ -165,6 +165,10 @@
 (add-to-list 'auto-mode-alist '("\\.coffee$" . coffee-mode))
 (add-to-list 'auto-mode-alist '("Cakefile" . coffee-mode))
 
+;; load MATLAB Mode
+(add-to-list 'load-path "~/.emacs.d/matlab")
+(require 'matlab)
+
 ;; maximize screen on startup
 (require 'maxframe)
 (add-hook 'window-setup-hook 'maximize-frame t)
