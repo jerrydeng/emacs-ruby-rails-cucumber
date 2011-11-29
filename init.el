@@ -97,9 +97,14 @@
 (add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
 
 ;; set emacs nav
-(add-to-list 'load-path "~/.emacs.d/elisp/emacs-nav")
-(require 'nav)
-(nav)
+;; (add-to-list 'load-path "~/.emacs.d/elisp/emacs-nav")
+;; (require 'nav)
+;; (nav)
+
+;; set line num
+(require 'linum+)
+(setq linum-format " %d ")
+(global-linum-mode t)
 
 ;; set color theme
 (add-to-list 'load-path "~/.emacs.d/elisp/color-theme")
