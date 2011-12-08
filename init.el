@@ -181,5 +181,9 @@
 ;; x-copy to clipboard
 (setq x-select-enable-clipboard t)
 
+;; dirtree
+(require 'dirtree)
+(global-set-key (kbd "C-x C-o") 'dirtree)
+
 (provide 'init)
 ;;; init.el ends here

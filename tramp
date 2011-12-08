@@ -2,5 +2,5 @@
 ;; Tramp connection history.  Don't change this file.
 ;; You can delete it, forcing Tramp to reapply the checks.
 
-((["scpc" nil "g" nil]
+((["scpc" nil "file" nil]
   nil))
