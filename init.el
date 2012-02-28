@@ -185,5 +185,9 @@
 (require 'dirtree)
 (global-set-key (kbd "C-x C-o") 'dirtree)
 
+;; mustache
+(add-to-list 'load-path "~/.emacs.d/vendor/mustache-mode.el")
+(require 'mustache-mode)
+
 (provide 'init)
 ;;; init.el ends here
