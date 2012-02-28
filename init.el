@@ -188,6 +188,7 @@
 ;; mustache
 (add-to-list 'load-path "~/.emacs.d/mustache-mode")
 (require 'mustache-mode)
+(add-to-list 'auto-mode-alist '("\\.handlebars$" . mustache-mode))
 
 (provide 'init)
 ;;; init.el ends here
