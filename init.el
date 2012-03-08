@@ -190,5 +190,16 @@
 (require 'mustache-mode)
 (add-to-list 'auto-mode-alist '("\\.handlebars$" . mustache-mode))
 
+;; set global tab width
+(setq-default tab-width 4)
+
+;; set coffeescript indentation
+(defun coffee-custom ()
+  "coffee-mode-hook"
+ (set (make-local-variable 'tab-width) 2))
+
+(add-hook 'coffee-mode-hook
+  '(lambda() (coffee-custom)))
+
 (provide 'init)
 ;;; init.el ends here
