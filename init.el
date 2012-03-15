@@ -155,10 +155,10 @@
 (yas/load-directory "~/.emacs.d/snippets/")
 
 ;; load Sass SCSS mode
-(setq exec-path (cons (expand-file-name "~/.rvm/gems/ruby-1.9.2-p290@weibo/gems/sass-3.1.7/bin") exec-path))
 (add-to-list 'load-path (expand-file-name "~/.emacs.d"))
 (autoload 'scss-mode "scss-mode")
 (add-to-list 'auto-mode-alist '("\\.scss\\'" . scss-mode))
+(setq scss-compile-at-save nil)
 
 ;; load Clojure-mode
 (add-to-list 'load-path "~/.emacs.d/clojure-mode")
