@@ -91,6 +91,8 @@
 (add-to-list 'load-path "~/.emacs.d/rhtml")
 (require 'rhtml-mode)
 (add-to-list 'auto-mode-alist '("\\.erb$" . rhtml-mode))
+;; use rhtml mode for eco
+(add-to-list 'auto-mode-alist '("\\.eco$" . rhtml-mode))
 
 ;; Load yaml mode
 (require 'yaml-mode)
