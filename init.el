@@ -31,6 +31,7 @@
 
 (require 'package)
 (package-initialize)
+
 ;;(require 'starter-kit-elpa)
 
 ;; Load up starter kit customizations:
@@ -112,8 +113,12 @@
 (add-to-list 'load-path "~/.emacs.d/elisp/color-theme")
 (require 'color-theme)
 (color-theme-initialize)
-(load-file "~/.emacs.d/themes/color-theme-blackboard.el")
-(color-theme-blackboard)
+(load-file "~/.emacs.d/themes/color-theme-twilight.el")
+(color-theme-twilight)
+
+;(add-to-list 'load-path "~/.emacs.d/themes/emacs-color-theme-solarized")
+;(require 'color-theme-solarized)
+;(color-theme-solarized-dark)
 
 ;; Benchmarking
 (message "My .emacs loaded in %ds"
@@ -134,7 +139,7 @@
 (setq w32-get-true-file-attributes nil)
 
 ;; add groovy support
-;;; turn on syntax hilighting
+;;; turn on syntax hilighting≈≈
 (global-font-lock-mode 1)
 
 ;;; use groovy-mode when file ends in .groovy or has #!/bin/groovy at start
