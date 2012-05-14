@@ -167,6 +167,9 @@
 (add-to-list 'auto-mode-alist '("\\.scss\\'" . scss-mode))
 (setq scss-compile-at-save nil)
 
+;; use css mode for css.erb
+(add-to-list 'auto-mode-alist '("\\.css.erb\\'" . css-mode))
+
 ;; load Clojure-mode
 (add-to-list 'load-path "~/.emacs.d/clojure-mode")
 (require 'clojure-mode)
