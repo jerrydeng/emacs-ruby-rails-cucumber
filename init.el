@@ -189,6 +189,15 @@
 (add-to-list 'auto-mode-alist '("\\.coffee$" . coffee-mode))
 (add-to-list 'auto-mode-alist '("Cakefile" . coffee-mode))
 
+;; load haml mode
+(add-to-list 'load-path "~/.emacs.d/haml-mode")
+(require 'haml-mode)
+(add-to-list 'auto-mode-alist '("\\.haml$" . haml-mode))
+(add-hook 'haml-mode-hook
+          (lambda ()
+            (setq indent-tabs-mode nil)
+            (define-key haml-mode-map "\C-m" 'newline-and-indent)))
+
 ;; load MATLAB Mode
 (add-to-list 'load-path "~/.emacs.d/matlab")
 (require 'matlab)
