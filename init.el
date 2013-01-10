@@ -128,7 +128,7 @@
       ;;(load-file "~/.emacs.d/themes/color-theme-twilight.el")
       (color-theme-twilight))
       ;; else (optional)
-      (add-to-list 'load-path "~/.emacs.d/elisp/color-theme/themes/emacs-color-theme-solarized")
+      (add-to-list 'load-path "~/.emacs.d/elisp/color-theme/themes/solarized")
       (require 'color-theme-solarized)
       (color-theme-solarized-dark))
 
