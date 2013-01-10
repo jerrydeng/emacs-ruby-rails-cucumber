@@ -121,12 +121,16 @@
 (add-to-list 'load-path "~/.emacs.d/elisp/color-theme")
 (require 'color-theme)
 (color-theme-initialize)
-(load-file "~/.emacs.d/themes/color-theme-twilight.el")
-(color-theme-twilight)
 
-;(add-to-list 'load-path "~/.emacs.d/themes/emacs-color-theme-solarized")
-;(require 'color-theme-solarized)
-;(color-theme-solarized-dark)
+(if (display-graphic-p)
+    (progn
+      ;; if graphic
+      ;;(load-file "~/.emacs.d/themes/color-theme-twilight.el")
+      (color-theme-twilight))
+      ;; else (optional)
+      (add-to-list 'load-path "~/.emacs.d/elisp/color-theme/themes/emacs-color-theme-solarized")
+      (require 'color-theme-solarized)
+      (color-theme-solarized-dark))
 
 ;; Benchmarking
 (message "My .emacs loaded in %ds"
